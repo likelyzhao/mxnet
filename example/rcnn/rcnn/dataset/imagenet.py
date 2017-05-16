@@ -114,10 +114,10 @@ class imagenet(IMDB):
             with open(cache_file, 'rb') as fid:
                 roidb = cPickle.load(fid)
             print('{} gt roidb loaded from {}'.format(self.name, cache_file))
-	    for gt in roidb:
+            for gt in roidb:
                 if gt['boxes'].shape[0]==0:
                     print(gt['image'])
-            return roidb
+                return roidb
 
         gt_roidb = [self.load_imagenet_annotation(index) for index in self.image_set_index]
         with open(cache_file, 'wb') as fid:
@@ -249,24 +249,107 @@ class imagenet(IMDB):
         self.write_pascal_results(detections)
         self.do_python_eval()
 
+    def _voting_dets(self,dets, thresh=0.3):
+        """
+        :param dets [ndets*5]    x1 , y1 , x2 , y2 , scores
+
+        :return: 
+        """
+        all_boxes = [[]]
+
+        x1 = dets[:, 0]
+        y1 = dets[:, 1]
+        x2 = dets[:, 2]
+        y2 = dets[:, 3]
+        scores = dets[:, 4]
+        areas = (x2 - x1 + 1) * (y2 - y1 + 1)
+        order = scores.argsort()[::-1]
+
+        suppressed = \
+            np.zeros((dets.shape[0]), dtype=np.int)
+        weights = \
+            np.zeros((dets.shape[0]), dtype=np.float)
+        ndets = dets.shape[0]
+        for k in range(dets.shape[0]):
+            i = order[k]
+            if suppressed[i] != 0:
+                continue
+            ix1 = x1[i]
+            iy1 = y1[i]
+            ix2 = x2[i]
+            iy2 = y2[i]
+            iarea = areas[i]
+            for _j in range(k + 1, ndets):
+                j = order[_j]
+                if suppressed[j] != 0:
+                    continue
+                xx1 = max(ix1, x1[j])
+                yy1 = max(iy1, y1[j])
+                xx2 = min(ix2, x2[j])
+                yy2 = min(iy2, y2[j])
+                w = max(0.0, xx2 - xx1 + 1)
+                h = max(0.0, yy2 - yy1 + 1)
+                inter = w * h
+                ovr = inter / (iarea + areas[j] - inter)
+                if ovr >= thresh:
+                    suppressed[j] = i + 1
+                    weights[j] = ovr
+        print(suppressed)
+        resix1 = []
+        resiy1 = []
+        resix2 = []
+        resiy2 = []
+        resscore = []
+        ## voting
+        for k in range(ndets):
+            i = order[k]
+            sumweight = 1
+            if suppressed[i] != 0:
+                continue
+            ix1 = x1[i]
+            iy1 = y1[i]
+            ix2 = x2[i]
+            iy2 = y2[i]
+
+            for _j in range(k + 1, ndets):
+                j = order[_j]
+                if suppressed[j] != i + 1:
+                    continue
+                sumweight += weights[j]
+                ix1 += weights[j] * x1[j]
+                iy1 += weights[j] * y1[j]
+                ix2 += weights[j] * x2[j]
+                iy2 += weights[j] * y2[j]
+            resix1.append(ix1 / sumweight)
+            resiy1.append(iy1 / sumweight)
+            resix2.append(ix2 / sumweight)
+            resiy2.append(iy2 / sumweight)
+            resscore.append(scores[i])
+
+        resix1 = np.vstack(resix1)
+        resiy1 = np.vstack(resiy1)
+        resix2 = np.vstack(resix2)
+        resiy2 = np.vstack(resiy2)
+        resscore = np.vstack(resscore)
+        all_boxes = np.hstack((resix1, resiy1, resix2, resiy2, resscore))
+
+        return all_boxes
+
     def boxvoting(self, detections_list):
         all_boxes = [[[] for _ in xrange(self.num_images)]
-                 for _ in xrange(self.num_classes)]
-
+                            for _ in xrange(self.num_classes)]
         for cls_ind, cls in enumerate(self.classes):
             if cls == '__background__':
                 continue
             for im_ind, index in enumerate(self.image_set_index):
                 dets = []
                 for i in range(detections_list.shape[0]):
-#      dets.append() =
-	            if len(dets) == 0:
-                    	continue
-                        # the VOCdevkit expects 1-based indices
-#                    for k in range(dets.shape[0]):
-#           f.write('{:s} {:.3f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.
-                #    format(index, dets[k, -1],
-                #       dets[k, 0] + 1, dets[k, 1] + 1, dets[k, 2] + 1, dets[k, 3] + 1))
+                    dets.append(detections_list[i][cls_ind][im_ind])
+                    if len(dets) == 0:
+                        continue
+                    all_boxes[cls_ind][im_ind] = self._voting_dets(dets)
+
+        return all_boxes
 
     def evaluate_detections_merge(self, detections_list):
         """
