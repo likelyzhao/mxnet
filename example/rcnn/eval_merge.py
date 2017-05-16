@@ -2,7 +2,7 @@ from __future__ import print_function
 import argparse
 import mxnet as mx
 from rcnn.config import config, default, generate_config
-from rcnn.tools.test_rcnn import test_rcnn
+from rcnn.tools.test_rcnn import test_rcnn,test_rcnn_merge
 from pycrayon import CrayonClient
 from datetime import datetime
 import numpy as np
@@ -38,18 +38,33 @@ def main():
     ctx = mx.gpu(args.gpu)
     print(args)
     cc = CrayonClient(hostname='10.132.90.242')
+    epochs = args.epoch.split(",")
+    networks = args.epoch.split(",")
+    prefixes = args.prefix.split(",")
+    if len(epochs) != len(networks):
+        print("network length and epoch length not match")
+        return
+    if len(epochs) != len(prefixes):
+        print("prefix length and epoch length not match")
+        return
+
     if args.exp_name is None:
-        args.exp_name = datetime.now().strftime('frcnnEval_%m-%d')
+        args.exp_name =('Merge')
+        for i in range(len(networks)):
+            args.exp_name += ('%s_epoch % d_)' % networks(i) % epochs(i))
     try:
         exp = cc.create_experiment(args.exp_name)
     except:
         exp = cc.open_experiment(args.exp_name)
 
-    for x in args.epoch.split(","):	
-        mAp = test_rcnn(args.network, args.dataset, args.image_set, args.root_path, args.dataset_path,
-              ctx, args.prefix,int(x),
+
+    #test_rcnn_merge
+
+    mAp = test_rcnn_merge(args.network, args.dataset, args.image_set, args.root_path, args.dataset_path,
+              ctx, args.prefix,args.epoch,
               args.vis, args.shuffle, args.has_rpn, args.proposal, args.thresh)
-        exp.add_scalar_value('mAp', mAp)
+    exp.add_scalar_value('mAp', mAp)
+
     return 
     
 if __name__ == '__main__':
