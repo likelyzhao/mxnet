@@ -114,9 +114,9 @@ class imagenet(IMDB):
             with open(cache_file, 'rb') as fid:
                 roidb = cPickle.load(fid)
             print('{} gt roidb loaded from {}'.format(self.name, cache_file))
-        for gt in roidb:
-            if gt['boxes'].shape[0]==0:
-                print(gt['image'])
+	    for gt in roidb:
+                if gt['boxes'].shape[0]==0:
+                    print(gt['image'])
             return roidb
 
         gt_roidb = [self.load_imagenet_annotation(index) for index in self.image_set_index]
@@ -260,10 +260,10 @@ class imagenet(IMDB):
                 dets = []
                 for i in range(detections_list.shape[0]):
 #      dets.append() =
-                if len(dets) == 0:
-                    continue
+	            if len(dets) == 0:
+                    	continue
                         # the VOCdevkit expects 1-based indices
-                    for k in range(dets.shape[0]):
+#                    for k in range(dets.shape[0]):
 #           f.write('{:s} {:.3f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.
                 #    format(index, dets[k, -1],
                 #       dets[k, 0] + 1, dets[k, 1] + 1, dets[k, 2] + 1, dets[k, 3] + 1))
