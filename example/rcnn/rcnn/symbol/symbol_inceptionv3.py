@@ -42,11 +42,11 @@ def Inception7B(data,
                 num_d3x3_red, num_d3x3_1, num_d3x3_2,
                 pool,
                 name):
-    tower_3x3 = Conv(data, num_3x3, kernel=(3, 3), pad=(0, 0), stride=(2, 2), name=('%s_conv' % name))
+    tower_3x3 = Conv(data, num_3x3, kernel=(3, 3), pad=(1, 1), stride=(2, 2), name=('%s_conv' % name))
     tower_d3x3 = Conv(data, num_d3x3_red, name=('%s_tower' % name), suffix='_conv')
     tower_d3x3 = Conv(tower_d3x3, num_d3x3_1, kernel=(3, 3), pad=(1, 1), stride=(1, 1), name=('%s_tower' % name), suffix='_conv_1')
-    tower_d3x3 = Conv(tower_d3x3, num_d3x3_2, kernel=(3, 3), pad=(0, 0), stride=(2, 2), name=('%s_tower' % name), suffix='_conv_2')
-    pooling = mx.symbol.Pooling(data=data, kernel=(3, 3), stride=(2, 2), pad=(0,0), pool_type="max", name=('max_pool_%s_pool' % name))
+    tower_d3x3 = Conv(tower_d3x3, num_d3x3_2, kernel=(3, 3), pad=(1, 1), stride=(2, 2), name=('%s_tower' % name), suffix='_conv_2')
+    pooling = mx.symbol.Pooling(data=data, kernel=(3, 3), stride=(2, 2), pad=(1,1), pool_type="max", name=('max_pool_%s_pool' % name))
     concat = mx.sym.Concat(*[tower_3x3, tower_d3x3, pooling], name='ch_concat_%s_chconcat' % name)
     return concat
 
@@ -112,14 +112,14 @@ def Inception7E(data,
 def get_inceptionv3_conv(data):
 
     # stage 1
-    conv = Conv(data, 32, kernel=(3, 3), stride=(2, 2), name="conv")
-    conv_1 = Conv(conv, 32, kernel=(3, 3), name="conv_1")
+    conv = Conv(data, 32, pad=(1,1),kernel=(3, 3), stride=(2, 2), name="conv")
+    conv_1 = Conv(conv, 32, pad=(1,1),kernel=(3, 3), name="conv_1")
     conv_2 = Conv(conv_1, 64, kernel=(3, 3), pad=(1, 1), name="conv_2")
-    pool = mx.sym.Pooling(data=conv_2, kernel=(3, 3), stride=(2, 2), pool_type="max", name="pool")
+    pool = mx.sym.Pooling(data=conv_2, pad=(1,1),kernel=(3, 3), stride=(2, 2), pool_type="max", name="pool")
     # stage 2
     conv_3 = Conv(pool, 80, kernel=(1, 1), name="conv_3")
-    conv_4 = Conv(conv_3, 192, kernel=(3, 3), name="conv_4")
-    pool1 = mx.sym.Pooling(data=conv_4, kernel=(3, 3), stride=(2, 2), pool_type="max", name="pool1")
+    conv_4 = Conv(conv_3, 192, pad=(1,1),kernel=(3, 3), name="conv_4")
+    pool1 = mx.sym.Pooling(data=conv_4, pad=(1,1),kernel=(3, 3), stride=(2, 2), pool_type="max", name="pool1")
     # stage 3
     in3a = Inception7A(pool1, 64,
                        64, 96, 96,
@@ -214,7 +214,7 @@ def get_inceptionv3_train(num_classes=config.NUM_CLASSES, num_anchors=config.NUM
     rpn_cls_act_reshape = mx.symbol.Reshape(
         data=rpn_cls_act, shape=(0, 2 * num_anchors, -1, 0), name='rpn_cls_act_reshape')
     if config.TRAIN.CXX_PROPOSAL:
-        rois = mx.contrib.symbol.Proposal(
+        rois = mx.symbol.Proposal(
             cls_prob=rpn_cls_act_reshape, bbox_pred=rpn_bbox_pred, im_info=im_info, name='rois',
             feature_stride=config.RPN_FEAT_STRIDE, scales=tuple(config.ANCHOR_SCALES), ratios=tuple(config.ANCHOR_RATIOS),
             rpn_pre_nms_top_n=config.TRAIN.RPN_PRE_NMS_TOP_N, rpn_post_nms_top_n=config.TRAIN.RPN_POST_NMS_TOP_N,
@@ -337,6 +337,7 @@ def get_inceptionv3_test(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_
 
     # classification
     cls_score = mx.symbol.FullyConnected(name='cls_score', data=flatten, num_hidden=num_classes)
+    #cls_prob = mx.symbol.SoftmaxOutput(name='cls_prob', data=cls_score)
     cls_prob = mx.symbol.softmax(name='cls_prob', data=cls_score)
     # bounding box regression
     bbox_pred = mx.symbol.FullyConnected(name='bbox_pred', data=flatten, num_hidden=num_classes * 4)

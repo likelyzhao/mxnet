@@ -83,30 +83,34 @@ def test_rcnn_merge(network, dataset, image_set, root_path, dataset_path,
     # set config
     if has_rpn:
         config.TEST.HAS_RPN = True
-
+    networks = network.split(",")
+    epochs = epoch.split(",")
+    prefixes = prefix.split(",")
     # print config
     pprint.pprint(config)
 
     # load symbol and testing data
     if has_rpn:
-        sym = eval('get_' + network + '_test')(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_ANCHORS)
+#        sym = eval('get_' + network + '_test')(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_ANCHORS)
         imdb = eval(dataset)(image_set, root_path, dataset_path)
         roidb = imdb.gt_roidb()
     else:
-        sym = eval('get_' + network + '_rcnn_test')(num_classes=config.NUM_CLASSES)
+#        sym = eval('get_' + network + '_rcnn_test')(num_classes=config.NUM_CLASSES)
         imdb = eval(dataset)(image_set, root_path, dataset_path)
         gt_roidb = imdb.gt_roidb()
         roidb = eval('imdb.' + proposal + '_roidb')(gt_roidb)
 
     # get test data iter
     test_data = TestLoader(roidb, batch_size=1, shuffle=shuffle, has_rpn=has_rpn)
-
-    for i in range(len(network)):
-        detres_all=[]
-
-        sym = eval('get_' + network[i] + '_test')(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_ANCHORS)
+#    print(networks)
+    detres_all=[]
+    for i in range(len(networks)):
+	print(networks[i])
+	sym = eval('get_' + networks[i] + '_test')(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_ANCHORS)
         # load model
-        arg_params, aux_params = load_param(prefix[i], epoch[i], convert=True, ctx=ctx, process=True)
+        print( prefixes)
+	print (epochs)
+        arg_params, aux_params = load_param(prefixes[i], int(epochs[i]), convert=True, ctx=ctx, process=True)
 
         # infer shape
         data_shape_dict = dict(test_data.provide_data)
