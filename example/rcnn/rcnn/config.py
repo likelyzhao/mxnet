@@ -160,7 +160,7 @@ network.inceptionresnet.FIXED_PARAMS_SHARED = ['conv2', 'conv1', 'conv3', 'conv4
 
 
 network.inceptionv3 = edict()
-network.inceptionv3.pretrained = 'model/inceptionresnet'
+network.inceptionv3.pretrained = 'model/inceptionv3'
 network.inceptionv3.pretrained_epoch = 0
 #network.inceptionresnet.PIXEL_MEANS = np.array([0, 0, 0])
 network.inceptionv3.IMAGE_STRIDE = 0

@@ -13,7 +13,9 @@ def parse_args():
     parser.add_argument('--network', help='network name', default=default.network, type=str)
     parser.add_argument('--dataset', help='dataset name', default=default.dataset, type=str)
     args, rest = parser.parse_known_args()
-    generate_config(args.network, args.dataset)
+    networks = args.network.split(",")
+    for x in networks:
+	generate_config(x, args.dataset)
     parser.add_argument('--image_set', help='image_set name', default=default.test_image_set, type=str)
     parser.add_argument('--root_path', help='output data folder', default=default.root_path, type=str)
     parser.add_argument('--dataset_path', help='dataset path', default=default.dataset_path, type=str)
@@ -39,7 +41,7 @@ def main():
     print(args)
     cc = CrayonClient(hostname='10.132.90.242')
     epochs = args.epoch.split(",")
-    networks = args.epoch.split(",")
+    networks = args.network.split(",")
     prefixes = args.prefix.split(",")
     if len(epochs) != len(networks):
         print("network length and epoch length not match")
@@ -49,9 +51,9 @@ def main():
         return
 
     if args.exp_name is None:
-        args.exp_name =('Merge')
+        args.exp_name ='Merge'
         for i in range(len(networks)):
-            args.exp_name += ('%s_epoch % d_)' % networks(i) % epochs(i))
+            args.exp_name += '%s_epoch%s_'%(networks[i],epochs[i])
     try:
         exp = cc.create_experiment(args.exp_name)
     except:

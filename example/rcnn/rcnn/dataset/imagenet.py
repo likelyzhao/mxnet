@@ -88,7 +88,7 @@ class imagenet(IMDB):
         image_set_index_file = os.path.join(self.data_path, 'ImageSets', 'DET', self.image_set + '.txt')
         assert os.path.exists(image_set_index_file), 'Path does not exist: {}'.format(image_set_index_file)
         with open(image_set_index_file) as f:
-              if self.image_set == "val":
+              if self.image_set == "val" or self.image_set =='valtest' :
                     image_set_index = [x.split(' ')[0] for x in f.readlines()]
               else:
                     image_set_index = [x.strip() for x in f.readlines()]
@@ -343,11 +343,15 @@ class imagenet(IMDB):
                 continue
             for im_ind, index in enumerate(self.image_set_index):
                 dets = []
-                for i in range(detections_list.shape[0]):
-                    dets.append(detections_list[i][cls_ind][im_ind])
-                    if len(dets) == 0:
+                for i in range(len(detections_list)):
+		   
+                    if len(detections_list[i][cls_ind][im_ind]) == 0:
                         continue
-                    all_boxes[cls_ind][im_ind] = self._voting_dets(dets)
+                    dets.append(detections_list[i][cls_ind][im_ind])
+		if len(dets) == 0:
+		    continue 
+		dets = np.vstack(dets)
+                all_boxes[cls_ind][im_ind] = self._voting_dets(dets)
 
         return all_boxes
 
@@ -357,11 +361,11 @@ class imagenet(IMDB):
         :param detections: result matrix, [bbox, confidence]
         :return: None
         """
-        if detections_list.shape[0] <=1:
+        if len(detections_list) <=1:
             detections = detections_list
         else:
             detections = self.boxvoting(detections_list)
-        # make all these folders for results
+	 # make all these folders for results
         result_dir = os.path.join(self.devkit_path, 'results')
         if not os.path.exists(result_dir):
             os.mkdir(result_dir)
@@ -371,7 +375,6 @@ class imagenet(IMDB):
         res_file_folder = os.path.join(self.devkit_path, 'results', 'ImageNet' , 'Main')
         if not os.path.exists(res_file_folder):
             os.mkdir(res_file_folder)
-
         self.write_pascal_results(detections)
         self.do_python_eval()
 
