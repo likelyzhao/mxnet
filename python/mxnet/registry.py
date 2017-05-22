@@ -129,7 +129,7 @@ def get_create_func(base_class, nickname):
         return registry[name](*args, **kwargs)
 
     create.__doc__ = """Create a %s instance from config.
-        
+ 
 Parameters
 ----------
 %s : str or %s instance
