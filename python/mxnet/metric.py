@@ -6,6 +6,8 @@ from __future__ import absolute_import
 import math
 from collections import OrderedDict
 
+from collections import OrderedDict
+
 import numpy
 
 from .base import numeric_types, string_types
@@ -26,7 +28,6 @@ def check_label_shapes(labels, preds, shape=0):
 
 class EvalMetric(object):
     """Base class for all evaluation metrics.
-
     .. note::
 
         This is a base class that provides common metric interfaces.
@@ -47,7 +48,6 @@ class EvalMetric(object):
     def __init__(self, name, output_names=None,
                  label_names=None, **kwargs):
         self.name = str(name)
-        self.output_names = output_names
         self.label_names = label_names
         self._kwargs = kwargs
         self.reset()

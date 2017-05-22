@@ -4,7 +4,10 @@
 """Registry for serializable objects."""
 from __future__ import absolute_import
 
+<<<<<<< HEAD
 import json
+=======
+>>>>>>> 21f10d8ae579113407f21bc6cc1defdc1fea0adb
 import warnings
 
 from .base import string_types
@@ -108,6 +111,7 @@ def get_create_func(base_class, nickname):
                 "%s is already an instance. Additional arguments are invalid"%(nickname)
             return name
 
+<<<<<<< HEAD
         if isinstance(name, dict):
             return create(**name)
 
@@ -122,6 +126,9 @@ def get_create_func(base_class, nickname):
             kwargs = json.loads(name)
             return create(**kwargs)
 
+=======
+        assert isinstance(name, string_types), "%s must be of string type"%nickname
+>>>>>>> 21f10d8ae579113407f21bc6cc1defdc1fea0adb
         name = name.lower()
         assert name in registry, \
             "%s is not registered. Please register with %s.register first"%(
@@ -129,7 +136,11 @@ def get_create_func(base_class, nickname):
         return registry[name](*args, **kwargs)
 
     create.__doc__ = """Create a %s instance from config.
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> 21f10d8ae579113407f21bc6cc1defdc1fea0adb
 Parameters
 ----------
 %s : str or %s instance
