@@ -68,7 +68,7 @@ for data_batch in data:
     mod.update()  # update parameters using the default optimizer
 ```
 
-A detailed tutorial is available at [http://mxnet.io/tutorials/python/module.html](http://mxnet.io/tutorials/python/module.html).
+A detailed tutorial is available at [http://mxnet.io/tutorials/basic/module.html](http://mxnet.io/tutorials/basic/module.html).
 
 
 ```eval_rst
