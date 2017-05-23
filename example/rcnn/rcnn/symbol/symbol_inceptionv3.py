@@ -386,6 +386,54 @@ def get_inceptionv3_rpn(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_A
     group = mx.symbol.Group([cls_prob, bbox_loss])
     return group
 
+
+def get_inceptionv3mutiltask_rpn(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_ANCHORS):
+    data = mx.symbol.Variable(name="data")
+    im_info = mx.symbol.Variable(name="im_info")
+    gt_boxes = mx.symbol.Variable(name="gt_boxes")
+    rpn_label = mx.symbol.Variable(name='label')
+    rpn_bbox_target = mx.symbol.Variable(name='bbox_target')
+    rpn_bbox_weight = mx.symbol.Variable(name='bbox_weight')
+    gt_label = mx.symbol.Variable(name='gtlabel')
+
+
+    # shared convolutional layers
+    conv_feat = get_inceptionv3_conv(data)
+
+    # RPN layers
+    rpn_conv = mx.symbol.Convolution(
+        data=conv_feat, kernel=(3, 3), pad=(1, 1), num_filter=512, name="rpn_conv_3x3")
+    rpn_relu = mx.symbol.Activation(data=rpn_conv, act_type="relu", name="rpn_relu")
+    rpn_cls_score = mx.symbol.Convolution(
+        data=rpn_relu, kernel=(1, 1), pad=(0, 0), num_filter=2 * num_anchors, name="rpn_cls_score")
+    rpn_bbox_pred = mx.symbol.Convolution(
+        data=rpn_relu, kernel=(1, 1), pad=(0, 0), num_filter=4 * num_anchors, name="rpn_bbox_pred")
+
+    # prepare rpn data
+    rpn_cls_score_reshape = mx.symbol.Reshape(
+        data=rpn_cls_score, shape=(0, 2, -1, 0), name="rpn_cls_score_reshape")
+
+    # classification
+    cls_prob = mx.symbol.SoftmaxOutput(data=rpn_cls_score_reshape, label=rpn_label, multi_output=True,
+                                           normalization='valid', use_ignore=True, ignore_label=-1, name="rpn_cls_prob")
+    # bounding box regression
+    bbox_loss_ = rpn_bbox_weight * mx.symbol.smooth_l1(name='rpn_bbox_loss_', scalar=3.0, data=(rpn_bbox_pred - rpn_bbox_target))
+    bbox_loss = mx.sym.MakeLoss(name='rpn_bbox_loss', data=bbox_loss_, grad_scale=1.0 / config.TRAIN.RPN_BATCH_SIZE)
+
+    # add cls error
+    pool1 = mx.sym.Pooling(data=conv_feat, kernel=(5, 5), stride=(3, 3), pool_type="max", name="reduce_pool") # 5x5 stride 3
+    conv1x1 = Conv(data=pool1, num_filter=512, kernel=(1, 1), stride=(1, 1), suffix='_conv_1X1')
+    flatten = mx.sym.Flatten(data=conv1x1, name="flatten")
+    fc1 = mx.sym.FullyConnected(name='fc_mid', data=flatten, num_hidden=1024)
+    cls = mx.sym.FullyConnected(name='fc_mid', data=fc1, num_hidden=num_classes)
+    cls_prob_class = mx.symbol.SoftmaxOutput(name='cls_prob', data=cls, label=gt_label, normalization='batch')
+
+    # group output
+    group = mx.symbol.Group([cls_prob, bbox_loss,cls_prob_class])
+    return group
+
+
+
 def get_inceptionv3_rpn_test(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_ANCHORS):
     data = mx.symbol.Variable(name="data")
     im_info = mx.symbol.Variable(name="im_info")
