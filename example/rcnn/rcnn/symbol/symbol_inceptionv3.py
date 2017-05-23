@@ -337,7 +337,7 @@ def get_inceptionv3_test(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_
 
     # classification
     cls_score = mx.symbol.FullyConnected(name='cls_score', data=flatten, num_hidden=num_classes)
-    #cls_prob = mx.symbol.SoftmaxOutput(name='cls_prob', data=cls_score)
+#    cls_prob = mx.symbol.SoftmaxOutput(name='cls_prob', data=cls_score)
     cls_prob = mx.symbol.softmax(name='cls_prob', data=cls_score)
     # bounding box regression
     bbox_pred = mx.symbol.FullyConnected(name='bbox_pred', data=flatten, num_hidden=num_classes * 4)

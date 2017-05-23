@@ -172,7 +172,7 @@ def get_resnet152_test(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_AN
     rpn_cls_prob_reshape = mx.symbol.Reshape(
         data=rpn_cls_prob, shape=(0, 2 * num_anchors, -1, 0), name='rpn_cls_prob_reshape')
     if config.TEST.CXX_PROPOSAL:
-        rois = mx.contrib.symbol.Proposal(
+        rois = mx.symbol.Proposal(
             cls_prob=rpn_cls_prob_reshape, bbox_pred=rpn_bbox_pred, im_info=im_info, name='rois',
             feature_stride=config.RPN_FEAT_STRIDE, scales=tuple(config.ANCHOR_SCALES), ratios=tuple(config.ANCHOR_RATIOS),
             rpn_pre_nms_top_n=config.TEST.RPN_PRE_NMS_TOP_N, rpn_post_nms_top_n=config.TEST.RPN_POST_NMS_TOP_N,
@@ -199,7 +199,8 @@ def get_resnet152_test(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_AN
 
     # classification
     cls_score = mx.symbol.FullyConnected(name='cls_score', data=pool1, num_hidden=num_classes)
-    cls_prob = mx.symbol.softmax(name='cls_prob', data=cls_score)
+    #cls_prob = mx.symbol.softmax(name='cls_prob', data=cls_score)
+    cls_prob = mx.symbol.SoftmaxOutput(name='cls_prob', data=cls_score)
     # bounding box regression
     bbox_pred = mx.symbol.FullyConnected(name='bbox_pred', data=pool1, num_hidden=num_classes * 4)
 
