@@ -5,8 +5,8 @@ from rcnn.config import config
 
 
 def get_rpn_names():
-    pred = ['rpn_cls_prob', 'rpn_bbox_loss']
-    label = ['rpn_label', 'rpn_bbox_target', 'rpn_bbox_weight']
+    pred = ['rpn_cls_prob', 'rpn_bbox_loss','mutiltask_cls']
+    label = ['rpn_label', 'rpn_bbox_target', 'rpn_bbox_weight','gtlabel']
     return pred, label
 
 
@@ -55,6 +55,28 @@ class RCNNAccMetric(mx.metric.EvalMetric):
         pred = preds[self.pred.index('rcnn_cls_prob')]
         if self.e2e:
             label = preds[self.pred.index('rcnn_label')]
+        else:
+            label = labels[self.label.index('rcnn_label')]
+
+        last_dim = pred.shape[-1]
+        pred_label = pred.asnumpy().reshape(-1, last_dim).argmax(axis=1).astype('int32')
+        label = label.asnumpy().reshape(-1,).astype('int32')
+
+        self.sum_metric += np.sum(pred_label.flat == label.flat)
+        self.num_inst += len(pred_label.flat)
+
+
+
+class MutilTaskAccMetric(mx.metric.EvalMetric):
+    def __init__(self):
+        super(MutilTaskAccMetric, self).__init__('MTAcc')
+#        self.e2e = config.TRAIN.END2END
+        self.pred, self.label = get_rcnn_names()
+
+    def update(self, labels, preds):
+        pred = preds[self.pred.index('mutiltask_cls')]
+        if self.e2e:
+            label = labels[self.label.index('gtlabel')]
         else:
             label = labels[self.label.index('rcnn_label')]
 
