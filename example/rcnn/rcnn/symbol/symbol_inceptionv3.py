@@ -422,8 +422,8 @@ def get_inceptionv3mutiltask_rpn(num_classes=config.NUM_CLASSES, num_anchors=con
 
     # add cls error
     conv_feat_roi = mx.symbol.ROIPooling(
-        name='roi_pool', data=conv_feat, rois=[0,0,conv_feat.shape[0],conv_feat.shape[1]],
-        pooled_size=(27, 27), spatial_scale=1.0)
+        name='roi_pool', data=conv_feat, rois=[0,0,0,im_info[0].shape[1],im_info[0].shape[2]],
+        pooled_size=(27, 27), spatial_scale=1.0 / config.RCNN_FEAT_STRIDE)
 
     pool1 = mx.sym.Pooling(data=conv_feat_roi, kernel=(5, 5), stride=(3, 3), pool_type="max", name="reduce_pool") # 5x5 stride 3
     conv1x1 = Conv(data=pool1, num_filter=512, kernel=(1, 1), stride=(1, 1), suffix='_conv_1X1')
