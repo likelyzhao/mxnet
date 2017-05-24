@@ -421,10 +421,9 @@ def get_inceptionv3mutiltask_rpn(num_classes=config.NUM_CLASSES, num_anchors=con
     bbox_loss = mx.sym.MakeLoss(name='rpn_bbox_loss', data=bbox_loss_, grad_scale=1.0 / config.TRAIN.RPN_BATCH_SIZE)
 
     # add cls error
-    conv_feat_roi = mx.symbol.ROIPooling(
-        name='roi_pool', data=conv_feat, rois=[0,0,0,im_info[0].shape[1],im_info[0].shape[2]],
-        pooled_size=(27, 27), spatial_scale=1.0 / config.RCNN_FEAT_STRIDE)
-
+    conv_feat_roi = mx.sym.Variable('data', shape=(27,27))
+    grid = mx.symbol.GridGenerator(data=conv_feat_roi,transform_type="warp")
+    conv_feat_roi = mx.symbol.BilinearSampler(conv_feat,grid)
     pool1 = mx.sym.Pooling(data=conv_feat_roi, kernel=(5, 5), stride=(3, 3), pool_type="max", name="reduce_pool") # 5x5 stride 3
     conv1x1 = Conv(data=pool1, num_filter=512, kernel=(1, 1), stride=(1, 1), suffix='_conv_1X1')
     flatten = mx.sym.Flatten(data=conv1x1, name="flatten")
