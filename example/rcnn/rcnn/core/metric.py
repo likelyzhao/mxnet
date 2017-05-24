@@ -72,18 +72,21 @@ class MutilTaskAccMetric(mx.metric.EvalMetric):
         super(MutilTaskAccMetric, self).__init__('MTAcc')
 #        self.e2e = config.TRAIN.END2END
         self.pred, self.label = get_rcnn_names()
+        self.pred.append('mutiltask_cls')
+        self.label.append('gtlabel')
 
     def update(self, labels, preds):
         pred = preds[self.pred.index('mutiltask_cls')]
-        if self.e2e:
-            label = labels[self.label.index('gtlabel')]
-        else:
-            label = labels[self.label.index('rcnn_label')]
+        label = labels[self.label.index('gtlabel')]
+
 
         last_dim = pred.shape[-1]
         pred_label = pred.asnumpy().reshape(-1, last_dim).argmax(axis=1).astype('int32')
         label = label.asnumpy().reshape(-1,).astype('int32')
 
+	#print(preds)
+        #print("gt")
+	#print(label)
         self.sum_metric += np.sum(pred_label.flat == label.flat)
         self.num_inst += len(pred_label.flat)
 
