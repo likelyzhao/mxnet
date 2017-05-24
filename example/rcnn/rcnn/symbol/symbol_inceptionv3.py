@@ -390,6 +390,7 @@ def get_inceptionv3_rpn(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_A
 def get_inceptionv3mutiltask_rpn(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_ANCHORS):
     data = mx.symbol.Variable(name="data")
     im_info = mx.symbol.Variable(name="im_info")
+    roi_info = mx.symbol.Variable(name="roi_info")
     gt_boxes = mx.symbol.Variable(name="gt_boxes")
     rpn_label = mx.symbol.Variable(name='label')
     rpn_bbox_target = mx.symbol.Variable(name='bbox_target')
@@ -421,15 +422,20 @@ def get_inceptionv3mutiltask_rpn(num_classes=config.NUM_CLASSES, num_anchors=con
     bbox_loss = mx.sym.MakeLoss(name='rpn_bbox_loss', data=bbox_loss_, grad_scale=1.0 / config.TRAIN.RPN_BATCH_SIZE)
 
     # add cls error
-    conv_feat_roi = mx.sym.Variable('data', shape=(27,27))
-    grid = mx.symbol.GridGenerator(data=conv_feat_roi,transform_type="warp")
-    conv_feat_roi = mx.symbol.BilinearSampler(conv_feat,grid)
+#    roi_info_reshape = mx.symbol.Reshape(data = roi_info,shape=(-1,5),name= "roi_reshape")
+    conv_feat_roi = mx.symbol.ROIPooling(
+        name='roi_pool', data=conv_feat, rois=roi_info, pooled_size=(21, 21), spatial_scale=1.0 / config.RCNN_FEAT_STRIDE)
+
+    #conv_feat_grid = mx.sym.Variable(name ='roidata', shape=(2,2,27,27))
+    #grid = mx.sym.GridGenerator(data=conv_feat_grid,transform_type="warp")
+    #print(grid)
+    #conv_feat_roi = mx.symbol.BilinearSampler(conv_feat,grid)
     pool1 = mx.sym.Pooling(data=conv_feat_roi, kernel=(5, 5), stride=(3, 3), pool_type="max", name="reduce_pool") # 5x5 stride 3
     conv1x1 = Conv(data=pool1, num_filter=512, kernel=(1, 1), stride=(1, 1), suffix='_conv_1X1')
     flatten = mx.sym.Flatten(data=conv1x1, name="flatten")
     fc1 = mx.sym.FullyConnected(name='fc_mid', data=flatten, num_hidden=1024)
     cls = mx.sym.FullyConnected(name='cls_fc', data=fc1, num_hidden=num_classes)
-    cls_prob_class = mx.symbol.SoftmaxOutput(name='cls_prob', data=cls, label=gt_label, normalization='batch')
+    cls_prob_class = mx.symbol.SoftmaxOutput(name='cls_prob', grad_scale =10, data=cls, label=gt_label, normalization='batch')
 
     # group output
     group = mx.symbol.Group([cls_prob, bbox_loss,cls_prob_class])

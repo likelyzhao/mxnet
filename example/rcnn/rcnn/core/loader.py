@@ -432,9 +432,9 @@ class AnchorLoaderAddcls(mx.io.DataIter):
 
         # decide data and label names
         if config.TRAIN.END2END:
-            self.data_name = ['data', 'im_info', 'gt_boxes']
+            self.data_name = ['data', 'im_info', 'gt_boxes','roi_info']
         else:
-            self.data_name = ['data']
+            self.data_name = ['data','roi_info']
         self.label_name = ['label', 'bbox_target', 'bbox_weight','gtlabel']
 
         # status variable for synchronization between get_data and get_label
@@ -544,6 +544,7 @@ class AnchorLoaderAddcls(mx.io.DataIter):
 
         # generate new label data
         new_label_list = []
+        num_idx=0
         for data, label in zip(data_list, label_list):
             # infer label shape
             data_shape = {k: v.shape for k, v in data.items()}
@@ -553,19 +554,24 @@ class AnchorLoaderAddcls(mx.io.DataIter):
 
             # add gt_boxes to data for e2e
             data['gt_boxes'] = label['gt_boxes'][np.newaxis, :, :]
+            data['roi_info'] = np.array([num_idx,0,0,data['im_info'].flatten()[0],data['im_info'].flatten()[1]]).flatten()
+	    #print(data['roi_info'])
 
             # assign anchor for label
             label = assign_anchor(feat_shape, label['gt_boxes'], data['im_info'],
                                   self.feat_stride, self.anchor_scales,
                                   self.anchor_ratios, self.allowed_border)
             label['gtlabel'] = data['gt_boxes'][0,0,4].flatten()
-	    print(label['gtlabel'])
+	    #print(label['gtlabel'])
             new_label_list.append(label)
-
+            num_idx = num_idx + 1
+#	print(data_list)
         all_data = dict()
         for key in self.data_name:
             all_data[key] = tensor_vstack([batch[key] for batch in data_list])
 
+	all_data['roi_info']=all_data['roi_info'].reshape(-1,5)
+        #print(all_data['roi_info'])
         all_label = dict()
         for key in self.label_name:
             pad = -1 if key == 'label' else 0

@@ -26,7 +26,7 @@ def train_rpn_mutiltask(network, dataset, image_set, root_path, dataset_path,
     config.TRAIN.BATCH_IMAGES = 1
 
     # load symbol
-    sym = eval('get_' + network + 'mutiltask_rpn')(num_anchors=config.NUM_ANCHORS)
+    sym = eval('get_' + network + 'mutiltask_rpn')(num_classes=config.NUM_CLASSES,num_anchors=config.NUM_ANCHORS)
     feat_sym = sym.get_internals()['rpn_cls_score_output']
 
     # setup multi-gpu
@@ -72,11 +72,11 @@ def train_rpn_mutiltask(network, dataset, image_set, root_path, dataset_path,
 #        arg_params, aux_params = load_param(pretrained, epoch, convert=True)
         for key in sym.list_arguments():
             arg_params[key] = mx.random.normal(0,0.01,shape=arg_shape_dict[key])
-            print("init" + key)
+            #print("init" + key)
 
         for key in sym.list_auxiliary_states():
             aux_params[key] = mx.random.normal(0,0.01,shape=aux_shape_dict[key])
-            print("aux " + key)
+            #print("aux " + key)
 
         arg_params['rpn_conv_3x3_weight'] = mx.random.normal(0, 0.01, shape=arg_shape_dict['rpn_conv_3x3_weight'])
         arg_params['rpn_conv_3x3_bias'] = mx.nd.zeros(shape=arg_shape_dict['rpn_conv_3x3_bias'])
@@ -108,7 +108,7 @@ def train_rpn_mutiltask(network, dataset, image_set, root_path, dataset_path,
                         logger=logger, context=ctx, work_load_list=work_load_list,
                         max_data_shapes=max_data_shape, max_label_shapes=max_label_shape,
                         fixed_param_prefix=fixed_param_prefix)
-
+    print(data_names)
     # decide training params
     # metric
     eval_metric = metric.RPNAccMetric()
