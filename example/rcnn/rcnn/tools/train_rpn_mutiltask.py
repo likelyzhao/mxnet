@@ -63,7 +63,8 @@ def train_rpn_mutiltask(network, dataset, image_set, root_path, dataset_path,
     aux_shape_dict = dict(zip(sym.list_auxiliary_states(), aux_shape))
     print('output shape')
     pprint.pprint(out_shape_dict)
-    arg_params ={}
+    arg_params = {}
+    aux_params = {}
     # load and initialize params
     if resume:
         arg_params, aux_params = load_param(prefix, begin_epoch, convert=True)
@@ -72,6 +73,10 @@ def train_rpn_mutiltask(network, dataset, image_set, root_path, dataset_path,
         for key in sym.list_arguments():
             arg_params[key] = mx.random.normal(0,0.01,shape=arg_shape_dict[key])
             print("init" + key)
+
+        for key in sym.list_auxiliary_states():
+            aux_params[key] = mx.random.normal(0,0.01,shape=aux_shape_dict[key])
+            print("aux " + key)
 
         arg_params['rpn_conv_3x3_weight'] = mx.random.normal(0, 0.01, shape=arg_shape_dict['rpn_conv_3x3_weight'])
         arg_params['rpn_conv_3x3_bias'] = mx.nd.zeros(shape=arg_shape_dict['rpn_conv_3x3_bias'])

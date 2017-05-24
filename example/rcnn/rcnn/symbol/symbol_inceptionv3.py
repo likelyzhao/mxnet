@@ -425,7 +425,7 @@ def get_inceptionv3mutiltask_rpn(num_classes=config.NUM_CLASSES, num_anchors=con
     conv1x1 = Conv(data=pool1, num_filter=512, kernel=(1, 1), stride=(1, 1), suffix='_conv_1X1')
     flatten = mx.sym.Flatten(data=conv1x1, name="flatten")
     fc1 = mx.sym.FullyConnected(name='fc_mid', data=flatten, num_hidden=1024)
-    cls = mx.sym.FullyConnected(name='fc_mid', data=fc1, num_hidden=num_classes)
+    cls = mx.sym.FullyConnected(name='cls_fc', data=fc1, num_hidden=num_classes)
     cls_prob_class = mx.symbol.SoftmaxOutput(name='cls_prob', data=cls, label=gt_label, normalization='batch')
 
     # group output
