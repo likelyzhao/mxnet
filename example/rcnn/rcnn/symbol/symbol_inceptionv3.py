@@ -15,7 +15,7 @@ Szegedy, Christian, et al. "Rethinking the Inception Architecture for Computer V
 
 def Conv(data, num_filter, kernel=(1, 1), stride=(1, 1), pad=(0, 0), name=None, suffix=''):
     conv = mx.sym.Convolution(data=data, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad, no_bias=True, name='%s%s_conv2d' %(name, suffix))
-    bn = mx.sym.BatchNorm(data=conv, name='%s%s_batchnorm' %(name, suffix), fix_gamma=True)
+    bn = mx.sym.BatchNorm(data=conv, name='%s%s_batchnorm' %(name, suffix), fix_gamma=True,use_global_stats=False)
     act = mx.sym.Activation(data=bn, act_type='relu', name='%s%s_relu' %(name, suffix))
     return act
 
@@ -450,7 +450,7 @@ def get_inceptionv3mutiltask_rpn(num_classes=config.NUM_CLASSES, num_anchors=con
     #print(grid)
     #conv_feat_roi = mx.symbol.BilinearSampler(conv_feat,grid)
     cls_score = mx.symbol.FullyConnected(name='cls_score', data=flatten, num_hidden=num_classes)
-    cls_prob_class = mx.symbol.SoftmaxOutput(name='cls_prob', data=cls_score, label=gt_label, normalization='batch')
+    cls_prob_class = mx.symbol.SoftmaxOutput(name='cls_prob',grad_scale=0.01, data=cls_score, label=gt_label, normalization='batch')
     # group output
     group = mx.symbol.Group([cls_prob, bbox_loss, cls_prob_class])
     return group

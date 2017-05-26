@@ -62,6 +62,7 @@ class RCNNAccMetric(mx.metric.EvalMetric):
         pred_label = pred.asnumpy().reshape(-1, last_dim).argmax(axis=1).astype('int32')
         label = label.asnumpy().reshape(-1,).astype('int32')
 
+        #print(label)
         self.sum_metric += np.sum(pred_label.flat == label.flat)
         self.num_inst += len(pred_label.flat)
 
@@ -83,8 +84,13 @@ class MutilTaskAccMetric(mx.metric.EvalMetric):
         last_dim = pred.shape[-1]
         pred_label = pred.asnumpy().reshape(-1, last_dim).argmax(axis=1).astype('int32')
         label = label.asnumpy().reshape(-1,).astype('int32')
-
-	#print(preds)
+        #print("start")
+        #print("preds")
+        #print(pred)
+        #print("labels")
+        #print(label)
+        #print("pred")
+	#print(pred_label)
         #print("gt")
 	#print(label)
         self.sum_metric += np.sum(pred_label.flat == label.flat)

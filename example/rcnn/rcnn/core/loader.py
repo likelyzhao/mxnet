@@ -558,13 +558,16 @@ class AnchorLoaderAddcls(mx.io.DataIter):
                                          data['gt_boxes'].flatten()[1], data['gt_boxes'].flatten()[2],
                                          data['gt_boxes'].flatten()[3]]).flatten()
             #print(data['roi_info'])
+            #print(label)
 
             # assign anchor for label
             label = assign_anchor(feat_shape, label['gt_boxes'], data['im_info'],
                                   self.feat_stride, self.anchor_scales,
                                   self.anchor_ratios, self.allowed_border)
             label['gtlabel'] = data['gt_boxes'][0,0,4].flatten()
+            #print("label:")
             #print(label['gtlabel'])
+            
             new_label_list.append(label)
             num_idx = num_idx + 1
         #	print(data_list)

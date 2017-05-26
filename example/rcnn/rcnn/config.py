@@ -166,8 +166,8 @@ network.inceptionv3.pretrained_epoch = 0
 network.inceptionv3.IMAGE_STRIDE = 0
 network.inceptionv3.RPN_FEAT_STRIDE = 16
 network.inceptionv3.RCNN_FEAT_STRIDE = 16
-network.inceptionv3.FIXED_PARAMS = ['conv','conv_1', 'conv_2',"conv_3"]
-network.inceptionv3.FIXED_PARAMS_SHARED = ['conv2', 'conv1', 'conv3', 'conv4', 'conv5', 'beta']
+network.inceptionv3.FIXED_PARAMS = ["conv_batchnorm","conv_2_batchnorm","conv_3_batchnorm","conv_4_batchnorm"]
+network.inceptionv3.FIXED_PARAMS_SHARED = ['conv2', 'conv1', 'conv3', 'conv4', 'conv5', 'beta',"batchnorm"]
 
 
 # dataset settings

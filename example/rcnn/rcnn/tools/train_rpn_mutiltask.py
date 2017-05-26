@@ -69,14 +69,16 @@ def train_rpn_mutiltask(network, dataset, image_set, root_path, dataset_path,
     if resume:
         arg_params, aux_params = load_param(prefix, begin_epoch, convert=True)
     else:
-#        arg_params, aux_params = load_param(pretrained, epoch, convert=True)
+        arg_params, aux_params = load_param(pretrained, epoch, convert=True)
         for key in sym.list_arguments():
+            if 'batchnorm' in key:
+                continue
             arg_params[key] = mx.random.normal(0,0.01,shape=arg_shape_dict[key])
             #print("init" + key)
 
-        for key in sym.list_auxiliary_states():
-            aux_params[key] = mx.random.normal(0,0.01,shape=aux_shape_dict[key])
-            #print("aux " + key)
+ #       for key in sym.list_auxiliary_states():
+ #           aux_params[key] = mx.random.normal(0,0.01,shape=aux_shape_dict[key])
+ #           #print("aux " + key)
 
         arg_params['rpn_conv_3x3_weight'] = mx.random.normal(0, 0.01, shape=arg_shape_dict['rpn_conv_3x3_weight'])
         arg_params['rpn_conv_3x3_bias'] = mx.nd.zeros(shape=arg_shape_dict['rpn_conv_3x3_bias'])
