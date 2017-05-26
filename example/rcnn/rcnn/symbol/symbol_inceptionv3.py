@@ -12,6 +12,7 @@ Reference:
 Szegedy, Christian, et al. "Rethinking the Inception Architecture for Computer Vision." arXiv preprint arXiv:1512.00567 (2015).
 """
 
+
 def Conv(data, num_filter, kernel=(1, 1), stride=(1, 1), pad=(0, 0), name=None, suffix=''):
     conv = mx.sym.Convolution(data=data, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad, no_bias=True, name='%s%s_conv2d' %(name, suffix))
     bn = mx.sym.BatchNorm(data=conv, name='%s%s_batchnorm' %(name, suffix), fix_gamma=True)
@@ -424,21 +425,34 @@ def get_inceptionv3mutiltask_rpn(num_classes=config.NUM_CLASSES, num_anchors=con
     # add cls error
 #    roi_info_reshape = mx.symbol.Reshape(data = roi_info,shape=(-1,5),name= "roi_reshape")
     conv_feat_roi = mx.symbol.ROIPooling(
-        name='roi_pool', data=conv_feat, rois=roi_info, pooled_size=(21, 21), spatial_scale=1.0 / config.RCNN_FEAT_STRIDE)
+        name='roi_pool', data=conv_feat, rois=roi_info, pooled_size=(17, 17), spatial_scale=1.0 / config.RCNN_FEAT_STRIDE)
+
+    # res5
+    in4e = Inception7D(conv_feat_roi, 192, 320,
+                       192, 192, 192, 192,
+                       "max", "mixed_8")
+
+    # stage 5
+    in5a = Inception7E(in4e, 320,
+                       384, 384, 384,
+                       448, 384, 384, 384,
+                       "avg", 192, "mixed_9")
+    in5b = Inception7E(in5a, 320,
+                       384, 384, 384,
+                       448, 384, 384, 384,
+                       "max", 192, "mixed_10")
+    # pool
+    pool1 = mx.sym.Pooling(data=in5b, kernel=(8, 8), stride=(1, 1), pool_type="avg", name="global_pool")
+    flatten = mx.sym.Flatten(data=pool1, name="flatten")
 
     #conv_feat_grid = mx.sym.Variable(name ='roidata', shape=(2,2,27,27))
     #grid = mx.sym.GridGenerator(data=conv_feat_grid,transform_type="warp")
     #print(grid)
     #conv_feat_roi = mx.symbol.BilinearSampler(conv_feat,grid)
-    pool1 = mx.sym.Pooling(data=conv_feat_roi, kernel=(5, 5), stride=(3, 3), pool_type="max", name="reduce_pool") # 5x5 stride 3
-    conv1x1 = Conv(data=pool1, num_filter=512, kernel=(1, 1), stride=(1, 1), suffix='_conv_1X1')
-    flatten = mx.sym.Flatten(data=conv1x1, name="flatten")
-    fc1 = mx.sym.FullyConnected(name='fc_mid', data=flatten, num_hidden=1024)
-    cls = mx.sym.FullyConnected(name='cls_fc', data=fc1, num_hidden=num_classes)
-    cls_prob_class = mx.symbol.SoftmaxOutput(name='cls_prob', grad_scale =10, data=cls, label=gt_label, normalization='batch')
-
+    cls_score = mx.symbol.FullyConnected(name='cls_score', data=flatten, num_hidden=num_classes)
+    cls_prob_class = mx.symbol.SoftmaxOutput(name='cls_prob', data=cls_score, label=gt_label, normalization='batch')
     # group output
-    group = mx.symbol.Group([cls_prob, bbox_loss,cls_prob_class])
+    group = mx.symbol.Group([cls_prob, bbox_loss, cls_prob_class])
     return group
 
 
