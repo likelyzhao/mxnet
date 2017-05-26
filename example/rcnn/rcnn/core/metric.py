@@ -5,8 +5,8 @@ from rcnn.config import config
 
 
 def get_rpn_names():
-    pred = ['rpn_cls_prob', 'rpn_bbox_loss']
-    label = ['rpn_label', 'rpn_bbox_target', 'rpn_bbox_weight']
+    pred = ['rpn_cls_prob', 'rpn_bbox_loss','mutiltask_cls']
+    label = ['rpn_label', 'rpn_bbox_target', 'rpn_bbox_weight','gtlabel']
     return pred, label
 
 
@@ -62,6 +62,31 @@ class RCNNAccMetric(mx.metric.EvalMetric):
         pred_label = pred.asnumpy().reshape(-1, last_dim).argmax(axis=1).astype('int32')
         label = label.asnumpy().reshape(-1,).astype('int32')
 
+        self.sum_metric += np.sum(pred_label.flat == label.flat)
+        self.num_inst += len(pred_label.flat)
+
+
+
+class MutilTaskAccMetric(mx.metric.EvalMetric):
+    def __init__(self):
+        super(MutilTaskAccMetric, self).__init__('MTAcc')
+#        self.e2e = config.TRAIN.END2END
+        self.pred, self.label = get_rcnn_names()
+        self.pred.append('mutiltask_cls')
+        self.label.append('gtlabel')
+
+    def update(self, labels, preds):
+        pred = preds[self.pred.index('mutiltask_cls')]
+        label = labels[self.label.index('gtlabel')]
+
+
+        last_dim = pred.shape[-1]
+        pred_label = pred.asnumpy().reshape(-1, last_dim).argmax(axis=1).astype('int32')
+        label = label.asnumpy().reshape(-1,).astype('int32')
+
+	#print(preds)
+        #print("gt")
+	#print(label)
         self.sum_metric += np.sum(pred_label.flat == label.flat)
         self.num_inst += len(pred_label.flat)
 

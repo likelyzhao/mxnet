@@ -76,6 +76,83 @@ def test_rcnn(network, dataset, image_set, root_path, dataset_path,
 
          return np.mean(imdb.ap)
 
+
+def test_rcnn_merge(network, dataset, image_set, root_path, dataset_path,
+                    ctx, prefix, epoch,
+                    vis, shuffle, has_rpn, proposal, thresh):
+    # set config
+    if has_rpn:
+        config.TEST.HAS_RPN = True
+    networks = network.split(",")
+    epochs = epoch.split(",")
+    prefixes = prefix.split(",")
+    # print config
+    pprint.pprint(config)
+
+    # load symbol and testing data
+    if has_rpn:
+#        sym = eval('get_' + network + '_test')(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_ANCHORS)
+        imdb = eval(dataset)(image_set, root_path, dataset_path)
+        roidb = imdb.gt_roidb()
+    else:
+#        sym = eval('get_' + network + '_rcnn_test')(num_classes=config.NUM_CLASSES)
+        imdb = eval(dataset)(image_set, root_path, dataset_path)
+        gt_roidb = imdb.gt_roidb()
+        roidb = eval('imdb.' + proposal + '_roidb')(gt_roidb)
+
+    # get test data iter
+    test_data = TestLoader(roidb, batch_size=1, shuffle=shuffle, has_rpn=has_rpn)
+#    print(networks)
+    detres_all=[]
+    for i in range(len(networks)):
+	print(networks[i])
+	sym = eval('get_' + networks[i] + '_test')(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_ANCHORS)
+        # load model
+        print( prefixes)
+	print (epochs)
+        arg_params, aux_params = load_param(prefixes[i], int(epochs[i]), convert=True, ctx=ctx, process=True)
+
+        # infer shape
+        data_shape_dict = dict(test_data.provide_data)
+        arg_shape, _, aux_shape = sym.infer_shape(**data_shape_dict)
+        arg_shape_dict = dict(zip(sym.list_arguments(), arg_shape))
+        aux_shape_dict = dict(zip(sym.list_auxiliary_states(), aux_shape))
+
+        # check parameters
+        for k in sym.list_arguments():
+            if k in data_shape_dict or 'label' in k:
+                continue
+            assert k in arg_params, k + ' not initialized'
+            assert arg_params[k].shape == arg_shape_dict[k], \
+                'shape inconsistent for ' + k + ' inferred ' + str(arg_shape_dict[k]) + ' provided ' + str(arg_params[k].shape)
+        for k in sym.list_auxiliary_states():
+            assert k in aux_params, k + ' not initialized'
+            assert aux_params[k].shape == aux_shape_dict[k], \
+                'shape inconsistent for ' + k + ' inferred ' + str(aux_shape_dict[k]) + ' provided ' + str(aux_params[k].shape)
+
+        # decide maximum shape
+        data_names = [k[0] for k in test_data.provide_data]
+        label_names = None
+        max_data_shape = [('data', (1, 3, max([v[0] for v in config.SCALES]), max([v[1] for v in config.SCALES])))]
+        if not has_rpn:
+            max_data_shape.append(('rois', (1, config.TEST.PROPOSAL_POST_NMS_TOP_N + 30, 5)))
+
+        # create predictor
+        predictor = Predictor(sym, data_names, label_names,
+                              context=ctx, max_data_shapes=max_data_shape,
+                              provide_data=test_data.provide_data, provide_label=test_data.provide_label,
+                              arg_params=arg_params, aux_params=aux_params)
+
+        # start detection
+        detres_all.append(pred_eval(predictor, test_data, imdb, vis=vis, thresh=thresh))
+    imdb.evaluate_detections_merge(detres_all)
+
+    if dataset == "imagenet":
+
+         return np.mean(imdb.ap)
+
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Test a Fast R-CNN network')
     # general

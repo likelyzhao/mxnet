@@ -25,8 +25,10 @@ imported with:
 
    ndarray
    symbol
+   loss
    module
    kvstore
    io
    optimization
+   callback
 ```

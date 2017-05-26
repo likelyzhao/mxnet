@@ -88,10 +88,10 @@ class imagenet(IMDB):
         image_set_index_file = os.path.join(self.data_path, 'ImageSets', 'DET', self.image_set + '.txt')
         assert os.path.exists(image_set_index_file), 'Path does not exist: {}'.format(image_set_index_file)
         with open(image_set_index_file) as f:
-              if self.image_set == "val":
-   	      	image_set_index = [x.split(' ')[0] for x in f.readlines()]
+              if self.image_set == "val" or self.image_set =='valtest' :
+                    image_set_index = [x.split(' ')[0] for x in f.readlines()]
               else:
-		image_set_index = [x.strip() for x in f.readlines()]
+                    image_set_index = [x.strip() for x in f.readlines()]
         return image_set_index
 
     def image_path_from_index(self, index):
@@ -114,10 +114,10 @@ class imagenet(IMDB):
             with open(cache_file, 'rb') as fid:
                 roidb = cPickle.load(fid)
             print('{} gt roidb loaded from {}'.format(self.name, cache_file))
-	    for gt in roidb:
-		if gt['boxes'].shape[0]==0:
-		   print(gt['image'])
-            return roidb
+            for gt in roidb:
+                if gt['boxes'].shape[0]==0:
+                    print(gt['image'])
+                return roidb
 
         gt_roidb = [self.load_imagenet_annotation(index) for index in self.image_set_index]
         with open(cache_file, 'wb') as fid:
@@ -142,7 +142,7 @@ class imagenet(IMDB):
         filename = os.path.join(self.data_path, 'Annotations','DET',self.image_set, index + '.xml')
 #	print (filename)
         tree = ET.parse(filename)
-	#print(tree)
+    #print(tree)
         objs = tree.findall('object')
 #        if not self.config['use_diff']:
  #           non_diff_objs = [obj for obj in objs if int(obj.find('difficult').text) == 0]
@@ -162,12 +162,12 @@ class imagenet(IMDB):
             y1 = float(bbox.find('ymin').text) 
             x2 = float(bbox.find('xmax').text)
             if x2 == size[1]:
-		print ("label xmax reach the image width")
-		x2 = x2 - 1 
+                print ("label xmax reach the image width")
+                x2 = x2 - 1
             y2 = float(bbox.find('ymax').text)
-	    if y2 == size[0]:
-		print ("label ymax reach the image height")
-		y2 = y2 - 1
+            if y2 == size[0]:
+                print ("label ymax reach the image height")
+                y2 = y2 - 1
             cls = class_to_index[obj.find('name').text.lower().strip()]
             boxes[ix, :] = [x1, y1, x2, y2]
             gt_classes[ix] = cls
@@ -249,6 +249,137 @@ class imagenet(IMDB):
         self.write_pascal_results(detections)
         self.do_python_eval()
 
+    def _voting_dets(self,dets, thresh=0.3):
+        """
+        :param dets [ndets*5]    x1 , y1 , x2 , y2 , scores
+
+        :return: 
+        """
+        all_boxes = [[]]
+
+        x1 = dets[:, 0]
+        y1 = dets[:, 1]
+        x2 = dets[:, 2]
+        y2 = dets[:, 3]
+        scores = dets[:, 4]
+        areas = (x2 - x1 + 1) * (y2 - y1 + 1)
+        order = scores.argsort()[::-1]
+
+        suppressed = \
+            np.zeros((dets.shape[0]), dtype=np.int)
+        weights = \
+            np.zeros((dets.shape[0]), dtype=np.float)
+        ndets = dets.shape[0]
+        for k in range(dets.shape[0]):
+            i = order[k]
+            if suppressed[i] != 0:
+                continue
+            ix1 = x1[i]
+            iy1 = y1[i]
+            ix2 = x2[i]
+            iy2 = y2[i]
+            iarea = areas[i]
+            for _j in range(k + 1, ndets):
+                j = order[_j]
+                if suppressed[j] != 0:
+                    continue
+                xx1 = max(ix1, x1[j])
+                yy1 = max(iy1, y1[j])
+                xx2 = min(ix2, x2[j])
+                yy2 = min(iy2, y2[j])
+                w = max(0.0, xx2 - xx1 + 1)
+                h = max(0.0, yy2 - yy1 + 1)
+                inter = w * h
+                ovr = inter / (iarea + areas[j] - inter)
+                if ovr >= thresh:
+                    suppressed[j] = i + 1
+                    weights[j] = ovr
+        print(suppressed)
+        resix1 = []
+        resiy1 = []
+        resix2 = []
+        resiy2 = []
+        resscore = []
+        ## voting
+        for k in range(ndets):
+            i = order[k]
+            sumweight = 1
+            if suppressed[i] != 0:
+                continue
+            ix1 = x1[i]
+            iy1 = y1[i]
+            ix2 = x2[i]
+            iy2 = y2[i]
+
+            for _j in range(k + 1, ndets):
+                j = order[_j]
+                if suppressed[j] != i + 1:
+                    continue
+                sumweight += weights[j]
+                ix1 += weights[j] * x1[j]
+                iy1 += weights[j] * y1[j]
+                ix2 += weights[j] * x2[j]
+                iy2 += weights[j] * y2[j]
+            resix1.append(ix1 / sumweight)
+            resiy1.append(iy1 / sumweight)
+            resix2.append(ix2 / sumweight)
+            resiy2.append(iy2 / sumweight)
+            resscore.append(scores[i])
+
+        resix1 = np.vstack(resix1)
+        resiy1 = np.vstack(resiy1)
+        resix2 = np.vstack(resix2)
+        resiy2 = np.vstack(resiy2)
+        resscore = np.vstack(resscore)
+        all_boxes = np.hstack((resix1, resiy1, resix2, resiy2, resscore))
+
+        return all_boxes
+
+    def boxvoting(self, detections_list):
+        all_boxes = [[[] for _ in xrange(self.num_images)]
+                            for _ in xrange(self.num_classes)]
+        for cls_ind, cls in enumerate(self.classes):
+            if cls == '__background__':
+                continue
+            for im_ind, index in enumerate(self.image_set_index):
+                dets = []
+                for i in range(len(detections_list)):
+		   
+                    if len(detections_list[i][cls_ind][im_ind]) == 0:
+                        continue
+                    dets.append(detections_list[i][cls_ind][im_ind])
+		if len(dets) == 0:
+		    continue 
+		dets = np.vstack(dets)
+                all_boxes[cls_ind][im_ind] = self._voting_dets(dets)
+
+        return all_boxes
+
+    def evaluate_detections_merge(self, detections_list):
+        """
+        top level evaluations
+        :param detections: result matrix, [bbox, confidence]
+        :return: None
+        """
+        if len(detections_list) <=1:
+            detections = detections_list
+        else:
+            detections = self.boxvoting(detections_list)
+	 # make all these folders for results
+        result_dir = os.path.join(self.devkit_path, 'results')
+        if not os.path.exists(result_dir):
+            os.mkdir(result_dir)
+        year_folder = os.path.join(self.devkit_path, 'results', 'ImageNet')
+        if not os.path.exists(year_folder):
+            os.mkdir(year_folder)
+        res_file_folder = os.path.join(self.devkit_path, 'results', 'ImageNet' , 'Main')
+        if not os.path.exists(res_file_folder):
+            os.mkdir(res_file_folder)
+        self.write_pascal_results(detections)
+        self.do_python_eval()
+
+
+
     def get_result_file_template(self):
         """
         this is a template
@@ -304,16 +435,18 @@ class imagenet(IMDB):
             aps += [ap]
             print('AP for {} = {:.4f}'.format(cls, ap))
         print('Mean AP = {:.4f}'.format(np.mean(aps)))
-	self.ap = aps
+        self.ap = aps
+
     def save_ap(self,path = "saveap.txt"):
-	with open(path,"w") as f:
-	    for cls_ind, cls in enumerate(self.classes):
+        aps=[]
+        with open(path,"w") as f:
+            for cls_ind, cls in enumerate(self.classes):
                 if cls == '__background__':
                     continue
                 filename = self.get_result_file_template().format(cls)
-                rec, prec, ap = imagenet_eval(filename, annopath, imageset_file, cls, annocache,
-                                     ovthresh=0.5, use_07_metric=use_07_metric)
+                rec, prec, ap = imagenet_eval(filename, self.annopath, self.imageset_file, cls, self.annocache,
+                                     ovthresh=0.5, use_07_metric=True)
                 aps += [ap]
                 f.write('AP for {} = {:.4f}'.format(cls, ap))
             f.write('Mean AP = {:.4f}'.format(np.mean(aps)))
-	
+
