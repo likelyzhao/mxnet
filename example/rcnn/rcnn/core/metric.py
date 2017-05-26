@@ -5,8 +5,8 @@ from rcnn.config import config
 
 
 def get_rpn_names():
-    pred = ['rpn_cls_prob', 'rpn_bbox_loss','mutiltask_cls']
-    label = ['rpn_label', 'rpn_bbox_target', 'rpn_bbox_weight','gtlabel']
+    pred = ['rpn_cls_prob', 'rpn_bbox_loss']
+    label = ['rpn_label', 'rpn_bbox_target', 'rpn_bbox_weight']
     return pred, label
 
 

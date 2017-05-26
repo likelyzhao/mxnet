@@ -214,7 +214,7 @@ def get_inceptionv3_train(num_classes=config.NUM_CLASSES, num_anchors=config.NUM
     rpn_cls_act_reshape = mx.symbol.Reshape(
         data=rpn_cls_act, shape=(0, 2 * num_anchors, -1, 0), name='rpn_cls_act_reshape')
     if config.TRAIN.CXX_PROPOSAL:
-        rois = mx.symbol.Proposal(
+        rois = mx.contrib.symbol.Proposal(
             cls_prob=rpn_cls_act_reshape, bbox_pred=rpn_bbox_pred, im_info=im_info, name='rois',
             feature_stride=config.RPN_FEAT_STRIDE, scales=tuple(config.ANCHOR_SCALES), ratios=tuple(config.ANCHOR_RATIOS),
             rpn_pre_nms_top_n=config.TRAIN.RPN_PRE_NMS_TOP_N, rpn_post_nms_top_n=config.TRAIN.RPN_POST_NMS_TOP_N,
