@@ -10,7 +10,7 @@ export PYTHONUNBUFFERED=1
 
 nohup python -m rcnn.tools.test_rpn --network resnet152                        \
                                   --dataset imagenet           \
-                                  --image_set train                           \
+                                  --image_set val                           \
                                   --prefix model/e2e          \
                                   --gpu 2                                   \
                                   --epoch 7                                \
