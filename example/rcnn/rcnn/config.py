@@ -22,7 +22,7 @@ config.TRAIN = edict()
 
 # R-CNN and RPN
 # size of images for each device, 2 for rcnn, 1 for rpn and e2e
-config.TRAIN.BATCH_IMAGES = 2
+config.TRAIN.BATCH_IMAGES = 4
 # e2e changes behavior of anchor loader and metric
 config.TRAIN.END2END = False
 # group images with similar aspect ratio
@@ -168,6 +168,18 @@ network.inceptionv3.RPN_FEAT_STRIDE = 16
 network.inceptionv3.RCNN_FEAT_STRIDE = 16
 network.inceptionv3.FIXED_PARAMS = ["conv_batchnorm","conv_2_batchnorm","conv_3_batchnorm","conv_4_batchnorm"]
 network.inceptionv3.FIXED_PARAMS_SHARED = ['conv2', 'conv1', 'conv3', 'conv4', 'conv5', 'beta',"batchnorm"]
+
+network.resnext = edict()
+network.resnext.pretrained = 'model/resnext-101'
+network.resnext.pretrained_epoch = 0
+network.resnext.PIXEL_MEANS = np.array([0, 0, 0])
+network.resnext.IMAGE_STRIDE = 0
+network.resnext.RPN_FEAT_STRIDE = 16
+network.resnext.RCNN_FEAT_STRIDE = 16
+network.resnext.FIXED_PARAMS = ['conv0', 'stage1', 'gamma', 'beta']
+network.resnext.FIXED_PARAMS_SHARED = ['conv0', 'stage1', 'stage2', 'stage3', 'gamma', 'beta']
+
+
 
 
 # dataset settings
